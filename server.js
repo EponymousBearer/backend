@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-
+const path = require("path");
 const app = express();
 app.use(cors()); // Allow frontend to access API
 app.use(express.json());
@@ -31,9 +31,14 @@ app.get("/api/price/:model/:condition", (req, res) => {
 });
 
 // Host Widget JavaScript
-app.get("/buyback-widget.js", (req, res) => {
-  res.sendFile(__dirname + "/buyback-widget.js");
-});
+// app.get("/buyback-widget.js", (req, res) => {
+//   res.sendFile(__dirname + "/buyback-widget.js");
+// });
 
 // Start Server
 app.listen(5000, () => console.log("Server running on port 5000"));
+
+// Serve the buyback-widget.js file
+app.get("/buyback-widget.js", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "buyback-widget.js"));
+});
