@@ -35,10 +35,13 @@ app.get("/api/price/:model/:condition", (req, res) => {
 //   res.sendFile(__dirname + "/buyback-widget.js");
 // });
 
+app.use(express.static("public"));
+
+app.get("/buyback-widget.js", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "buyback-widget.js"));
+});
+
 // Start Server
 app.listen(5000, () => console.log("Server running on port 5000"));
 
 // Serve the buyback-widget.js file
-app.get("/buyback-widget.js", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "buyback-widget.js"));
-});
