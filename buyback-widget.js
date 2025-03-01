@@ -14,93 +14,94 @@
       }
 
       container.innerHTML = `
-            <div id="buyback-container" style="border:1px solid #ddd; padding:10px; width:300px;">
-              <h2>Trade-in Your Device</h2>
-              <select id="buyback-category"></select>
-              <select id="buyback-model" disabled></select>
-              <select id="buyback-condition" disabled></select>
-              <div id="buyback-price"></div>
-            </div>
-          `;
+        <div id="buyback-container" style="border:1px solid #ddd; padding:10px; width:300px;">
+          <h2>Trade-in Your Device</h2>
+          <select id="buyback-category"></select>
+          <select id="buyback-model" disabled></select>
+          <select id="buyback-condition" disabled></select>
+          <div id="buyback-price"></div>
+        </div>
+      `;
 
       await this.loadCategories();
     }
 
-    async loadCategories() {
-      const categorySelect = document.getElementById("buyback-category");
+    async fetchData(endpoint) {
       try {
-        const response = await fetch(`${this.apiUrl}/api/categories`, {
+        const response = await fetch(`${this.apiUrl}${endpoint}`, {
           headers: { Authorization: `Bearer ${this.apiKey}` },
         });
-        const categories = await response.json();
-
-        categorySelect.innerHTML =
-          `<option>Select Brand</option>` +
-          categories.map((c) => `<option>${c}</option>`).join("");
-        categorySelect.addEventListener("change", () =>
-          this.loadModels(categorySelect.value)
-        );
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        return await response.json();
       } catch (error) {
-        console.error("Error loading categories:", error);
+        console.error(`Error fetching ${endpoint}:`, error);
+        return null;
       }
+    }
+
+    async loadCategories() {
+      const categorySelect = document.getElementById("buyback-category");
+      const data = await this.fetchData("/api/categories");
+      if (!data || !data.categories) return;
+
+      categorySelect.innerHTML =
+        `<option value="">Select Brand</option>` +
+        data.categories
+          .map((c) => `<option value="${c}">${c}</option>`)
+          .join("");
+      categorySelect.addEventListener("change", () =>
+        this.loadModels(categorySelect.value)
+      );
     }
 
     async loadModels(category) {
       const modelSelect = document.getElementById("buyback-model");
+      modelSelect.disabled = true;
+      modelSelect.innerHTML = `<option>Loading...</option>`;
+
+      const data = await this.fetchData(`/api/models/${category}`);
+      if (!data || !data.models) return;
+
+      modelSelect.innerHTML =
+        `<option value="">Select Model</option>` +
+        data.models.map((m) => `<option value="${m}">${m}</option>`).join("");
       modelSelect.disabled = false;
-
-      try {
-        const response = await fetch(`${this.apiUrl}/api/models/${category}`, {
-          headers: { Authorization: `Bearer ${this.apiKey}` },
-        });
-        const models = await response.json();
-
-        modelSelect.innerHTML =
-          `<option>Select Model</option>` +
-          models.map((m) => `<option>${m}</option>`).join("");
-        modelSelect.addEventListener("change", () =>
-          this.loadConditions(modelSelect.value)
-        );
-      } catch (error) {
-        console.error("Error loading models:", error);
-      }
+      modelSelect.addEventListener("change", () =>
+        this.loadConditions(modelSelect.value)
+      );
     }
 
     async loadConditions(model) {
       const conditionSelect = document.getElementById("buyback-condition");
+      conditionSelect.disabled = true;
+      conditionSelect.innerHTML = `<option>Loading...</option>`;
+
+      const data = await this.fetchData("/api/conditions");
+      if (!data || !data.conditions) return;
+
+      conditionSelect.innerHTML =
+        `<option value="">Select Condition</option>` +
+        data.conditions
+          .map((c) => `<option value="${c}">${c}</option>`)
+          .join("");
       conditionSelect.disabled = false;
-
-      try {
-        const response = await fetch(`${this.apiUrl}/api/conditions`, {
-          headers: { Authorization: `Bearer ${this.apiKey}` },
-        });
-        const conditions = await response.json();
-
-        conditionSelect.innerHTML =
-          `<option>Select Condition</option>` +
-          conditions.map((c) => `<option>${c}</option>`).join("");
-        conditionSelect.addEventListener("change", () =>
-          this.loadPrice(model, conditionSelect.value)
-        );
-      } catch (error) {
-        console.error("Error loading conditions:", error);
-      }
+      conditionSelect.addEventListener("change", () =>
+        this.loadPrice(model, conditionSelect.value)
+      );
     }
 
     async loadPrice(model, condition) {
       const priceDiv = document.getElementById("buyback-price");
+      priceDiv.innerHTML = "Calculating price...";
 
-      try {
-        const response = await fetch(
-          `${this.apiUrl}/api/price/${model}/${condition}`,
-          { headers: { Authorization: `Bearer ${this.apiKey}` } }
-        );
-        const data = await response.json();
-
-        priceDiv.innerHTML = `Trade-in Value: <b>$${data.price}</b>`;
-      } catch (error) {
-        console.error("Error loading price:", error);
+      const data = await this.fetchData(`/api/price/${model}/${condition}`);
+      if (!data || data.price === undefined) {
+        priceDiv.innerHTML = "Error fetching price.";
+        return;
       }
+
+      priceDiv.innerHTML = `Trade-in Value: <b>$${data.price}</b>`;
     }
   }
 
