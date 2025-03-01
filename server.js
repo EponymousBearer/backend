@@ -17,7 +17,7 @@ app.use((req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-const API_KEY = process.env.API_KEY || "test-api-key"; // Ensure API key is set
+const API_KEY = process.env.API_KEY || "mySecretKey123"; // Ensure API key is set
 
 // Authentication Middleware
 const authenticate = (req, res, next) => {
