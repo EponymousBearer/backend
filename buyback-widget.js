@@ -29,6 +29,7 @@
     async fetchData(endpoint) {
       try {
         const response = await fetch(`${this.apiUrl}${endpoint}`, {
+          mode: "cors",
           headers: { Authorization: `Bearer ${this.apiKey}` },
         });
         if (!response.ok)
