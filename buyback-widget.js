@@ -1,7 +1,8 @@
 (function () {
   class Buyback {
-    constructor({ apiUrl }) {
+    constructor({ apiUrl, apiKey }) {
       this.apiUrl = apiUrl;
+      this.apiKey = apiKey;
       this.loadWidget();
     }
 
@@ -13,14 +14,14 @@
       }
 
       container.innerHTML = `
-          <div id="buyback-container" style="border:1px solid #ddd; padding:10px; width:300px;">
-            <h2>Trade-in Your Device</h2>
-            <select id="buyback-category"></select>
-            <select id="buyback-model" disabled></select>
-            <select id="buyback-condition" disabled></select>
-            <div id="buyback-price"></div>
-          </div>
-        `;
+            <div id="buyback-container" style="border:1px solid #ddd; padding:10px; width:300px;">
+              <h2>Trade-in Your Device</h2>
+              <select id="buyback-category"></select>
+              <select id="buyback-model" disabled></select>
+              <select id="buyback-condition" disabled></select>
+              <div id="buyback-price"></div>
+            </div>
+          `;
 
       await this.loadCategories();
     }
@@ -28,7 +29,9 @@
     async loadCategories() {
       const categorySelect = document.getElementById("buyback-category");
       try {
-        const response = await fetch(`${this.apiUrl}/api/categories`);
+        const response = await fetch(`${this.apiUrl}/api/categories`, {
+          headers: { Authorization: `Bearer ${this.apiKey}` },
+        });
         const categories = await response.json();
 
         categorySelect.innerHTML =
@@ -47,7 +50,9 @@
       modelSelect.disabled = false;
 
       try {
-        const response = await fetch(`${this.apiUrl}/api/models/${category}`);
+        const response = await fetch(`${this.apiUrl}/api/models/${category}`, {
+          headers: { Authorization: `Bearer ${this.apiKey}` },
+        });
         const models = await response.json();
 
         modelSelect.innerHTML =
@@ -66,7 +71,9 @@
       conditionSelect.disabled = false;
 
       try {
-        const response = await fetch(`${this.apiUrl}/api/conditions`);
+        const response = await fetch(`${this.apiUrl}/api/conditions`, {
+          headers: { Authorization: `Bearer ${this.apiKey}` },
+        });
         const conditions = await response.json();
 
         conditionSelect.innerHTML =
@@ -85,7 +92,8 @@
 
       try {
         const response = await fetch(
-          `${this.apiUrl}/api/price/${model}/${condition}`
+          `${this.apiUrl}/api/price/${model}/${condition}`,
+          { headers: { Authorization: `Bearer ${this.apiKey}` } }
         );
         const data = await response.json();
 
@@ -96,10 +104,5 @@
     }
   }
 
-  // ✅ Attach Buyback class to the global window object
-  if (typeof window !== "undefined") {
-    window.Buyback = Buyback;
-  }
-
-  console.log("Buyback Widget Loaded:", window.Buyback); // Debugging
+  window.Buyback = Buyback;
 })();

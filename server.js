@@ -1,47 +1,43 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
 const path = require("path");
 const app = express();
 app.use(cors()); // Allow frontend to access API
 app.use(express.json());
 
-// Dummy Data for Trade-in
-const categories = ["Apple", "Samsung", "Google"];
-const models = {
-  Apple: ["iPhone 12", "iPhone 13", "iPhone 14"],
-  Samsung: ["Galaxy S21", "Galaxy S22"],
-  Google: ["Pixel 6", "Pixel 7"],
-};
-const conditions = ["New", "Good", "Fair", "Broken"];
-const prices = {
-  "iPhone 12": { New: 500, Good: 400, Fair: 300, Broken: 100 },
-  "iPhone 13": { New: 600, Good: 500, Fair: 350, Broken: 150 },
+const PORT = process.env.PORT || 5000;
+
+const authenticate = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const token = authHeader.split(" ")[1];
+  if (token !== process.env.API_KEY) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  next();
 };
 
-// API Routes
-app.get("/api/categories", (req, res) => res.json(categories));
-app.get("/api/models/:category", (req, res) =>
-  res.json(models[req.params.category] || [])
-);
-app.get("/api/conditions", (req, res) => res.json(conditions));
-app.get("/api/price/:model/:condition", (req, res) => {
-  const { model, condition } = req.params;
-  res.json({ price: prices[model]?.[condition] || "Not Available" });
+app.get("/api/categories", authenticate, (req, res) => {
+  res.json(["Apple", "Samsung", "Google"]);
 });
 
-// Host Widget JavaScript
-// app.get("/buyback-widget.js", (req, res) => {
-//   res.sendFile(__dirname + "/buyback-widget.js");
-// });
-
-app.use(express.static("public"));
-
-app.get("/buyback-widget.js", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "buyback-widget.js"));
+app.get("/api/models/:category", authenticate, (req, res) => {
+  res.json(["iPhone 12", "iPhone 13", "Galaxy S21"]);
 });
 
-// Start Server
-app.listen(5000, () => console.log("Server running on port 5000"));
+app.get("/api/conditions", authenticate, (req, res) => {
+  res.json(["New", "Used", "Broken"]);
+});
 
-// Serve the buyback-widget.js file
+app.get("/api/price/:model/:condition", authenticate, (req, res) => {
+  res.json({ price: Math.floor(Math.random() * 500) + 100 });
+});
+
+app.use("/buyback-widget.js", express.static(__dirname + "/buyback-widget.js"));
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
