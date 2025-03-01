@@ -97,5 +97,9 @@
   }
 
   // ✅ Attach Buyback class to the global window object
-  window.Buyback = Buyback;
+  if (typeof window !== "undefined") {
+    window.Buyback = Buyback;
+  }
+
+  console.log("Buyback Widget Loaded:", window.Buyback); // Debugging
 })();
