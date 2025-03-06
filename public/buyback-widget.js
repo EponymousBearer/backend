@@ -43,9 +43,7 @@
 
     async loadCategories() {
       const categorySelect = document.getElementById("buyback-category");
-      const data = await this.fetchData(
-        `https://backend-vert-pi-68.vercel.app/api/categories`
-      );
+      const data = await this.fetchData(`/api/categories`);
       if (!data || !data.categories) return;
 
       categorySelect.innerHTML =
