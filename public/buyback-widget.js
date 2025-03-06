@@ -288,5 +288,9 @@
     }
   }
 
-  window.Buyback = Buyback;
+  // window.Buyback = Buyback;
+  window.buyback = new Buyback({
+    apiUrl: "https://backend-vert-pi-68.vercel.app",
+    apiKey: "mySecretKey123",
+  });
 })();
