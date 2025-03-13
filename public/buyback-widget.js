@@ -6,7 +6,78 @@
       this.loadWidget();
     }
 
+    addStyles() {
+      const style = document.createElement("style");
+      style.innerHTML = `
+        .buyback-widget {
+          max-width: 400px;
+          margin: auto;
+          font-family: Arial, sans-serif;
+        }
+    
+        #buyback-container {
+          border: 1px solid #ddd;
+          padding: 15px;
+          border-radius: 10px;
+          box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    
+        h2 {
+          text-align: center;
+          color: #333;
+        }
+    
+        select {
+          width: 100%;
+          padding: 10px;
+          margin: 8px 0;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+          background-color: #f9f9f9;
+          font-size: 16px;
+          cursor: pointer;
+        }
+    
+        .question-block {
+          padding: 10px;
+          border-bottom: 1px solid #ddd;
+        }
+    
+        .question-block h3 {
+          margin-bottom: 8px;
+        }
+    
+        label {
+          display: flex;
+          align-items: center;
+          padding: 5px;
+          cursor: pointer;
+        }
+    
+        input[type="radio"] {
+          margin-right: 10px;
+        }
+    
+        input[type="radio"]:checked + span {
+          font-weight: bold;
+          color: #007bff;
+        }
+    
+        #buyback-checkOut {
+          text-align: center;
+          margin-top: 15px;
+          padding: 10px;
+          font-size: 18px;
+          background: #f1f1f1;
+          border-radius: 5px;
+          font-weight: bold;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
     async loadWidget() {
+      this.addStyles(); // Injects CSS dynamically
       const container = document.querySelector(".buyback-widget");
       if (!container) {
         console.error("Buyback widget container not found.");
@@ -241,11 +312,11 @@
         // 🔹 **Map selectedOptions keys to category names**
         const formattedSelections = { Condition: selectedCondition.trim() };
 
-    for (const [category, value] of Object.entries(selectedOptions)) {
-      if (category !== "condition") {
-        formattedSelections[category.trim()] = value.trim();
-      }
-    }
+        for (const [category, value] of Object.entries(selectedOptions)) {
+          if (category !== "condition") {
+            formattedSelections[category.trim()] = value.trim();
+          }
+        }
         console.log("Formatted Selections:", formattedSelections);
 
         // 🔹 **Apply price modifications**
