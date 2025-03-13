@@ -271,10 +271,10 @@
           )
         );
 
-      const product = await this.fetchData(
-        `/api/product/${productSlug}`
-      );
+      const product = await this.fetchData(`/api/product/${productSlug}`);
       if (!product) return;
+
+      console.log("product", product);
 
       const data = await this.fetchData(`/api/conditions/${productSlug}`);
       if (!data) return;
