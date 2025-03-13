@@ -61,6 +61,39 @@ export const getProductByBrandCategory = async (req, res) => {
   }
 };
 
+// get product with price modifier and conditions
+export const getProductBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    console.log("Fetching product with slug:", slug);
+
+    // Fetch product details
+    const product = await Product.findOne({ slug });
+    if (!product) {
+      console.log("Product not found:", slug);
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Fetch price modifiers and conditions using productSlug
+    const priceModifiers = (await PriceModifier.findOne({
+      productSlug: slug,
+    })) || { priceModifiers: [] };
+    const conditions = (await Condition.findOne({ productSlug: slug })) || {
+      conditions: [],
+    };
+
+    // console.log("Fetched Product:", product);
+    // console.log("Fetched Price Modifiers:", priceModifiers);
+    // console.log("Fetched Conditions:", conditions);
+
+    // Return structured response
+    res.json({ product, priceModifiers, conditions });
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 export const getConditions = async (req, res) => {
   const { productSlug } = req.params;
   console.log("Received productSlug:", productSlug);

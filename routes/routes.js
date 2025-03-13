@@ -5,6 +5,7 @@ import {
   getProductByBrandCategory,
   getConditions,
   getPriceModifier,
+  getProductBySlug,
 } from "../controllers/Controller.js";
 
 const router = express.Router();
@@ -14,6 +15,8 @@ router.get("/allcategories", getCategories);
 router.get("/brands/:slug", getBrandBySlug);
 
 router.get("/catalog/:categorySlug/:brandSlug", getProductByBrandCategory);
+
+router.get("/product/:slug", getProductBySlug);
 
 router.get("/conditions/:productSlug", getConditions);
 
