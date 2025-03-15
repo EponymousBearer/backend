@@ -109,6 +109,7 @@
       //     <div id="buyback-checkOut"></div>
       //   </div>
       // `;
+
       container.innerHTML = `
       <div id="buyback-container">
         <h2>Select Your Device</h2>
@@ -135,13 +136,10 @@
     }
 
     async loadCategories() {
-      // const categorySelect = document.getElementById("buyback-content");
-      // const data = await this.fetchData(`/api/allcategories`);
-      // console.log(data.map((c) => c.name));
       const content = document.getElementById("buyback-content");
+
       const data = await this.fetchData(`/api/allcategories`);
       if (!data) return;
-      // if (!data) return;
 
       content.innerHTML = `
         <div class="categories-grid">
@@ -211,6 +209,8 @@
       );
       if (!data) return;
 
+      console.log("data in loadproduct", data);
+
       content.innerHTML = `
         <button id="back-button">Back</button>
         <h3>Select a Product</h3>
@@ -219,7 +219,7 @@
             .map(
               (p) => `
                 <div class="product-card" data-product="${p.slug}">
-                  <img src="${p.image_url || "default.png"}" alt="${p.name}">
+                  <img src="${p.image || "default.png"}" alt="${p.name}">
                   <span>${p.name}</span>
                 </div>
               `
@@ -239,28 +239,16 @@
           this.displayOptions(productSlug);
         })
       );
-
-      // productSelect.disabled = false;
-      // productSelect.addEventListener("change", (event) => {
-      //   const selectedProductSlug = event.target.value;
-      //   const selectedProduct = data.find(
-      //     (p) => p.slug === selectedProductSlug
-      //   );
-
-      // if (selectedProduct) {
-      //   this.displayOptions(selectedProduct);
-      // }
-      // });
     }
 
     async displayOptions(productSlug) {
       const content = document.getElementById("buyback-content");
 
       content.innerHTML = `
-      <button id="back-button">Back</button>
-      <h3>Choose Device Condition</h3>
-      <div id="buyback-displayOptions">Loading...</div>
-    `;
+        <button id="back-button">Back</button>
+        <h3>Choose Device Condition</h3>
+        <div id="buyback-displayOptions">Loading...</div>
+      `;
 
       document
         .getElementById("back-button")
@@ -272,202 +260,185 @@
         );
 
       const product = await this.fetchData(`/api/product/${productSlug}`);
-      if (!product) return;
+      if (!product) {
+        console.error("Product data is missing!");
+        return;
+      }
 
       console.log("product", product);
 
-      const data = await this.fetchData(`/api/conditions/${productSlug}`);
-      if (!data) return;
+      this.selectedOptions.product = productSlug;
 
-      document.getElementById("buyback-displayOptions").innerHTML = `
-        ${data.conditions
-          .map(
-            (option) => `
+      // **Fix: Ensure element exists before modifying innerHTML**
+      const displayOptions = document.getElementById("buyback-displayOptions");
+      if (!displayOptions) {
+        console.error("Element #buyback-displayOptions not found!");
+        return;
+      }
+
+      displayOptions.innerHTML = `
+    ${
+      Array.isArray(product.product?.options)
+        ? product.product.options
+            .map(
+              (option) => `
               <div class="question-block">
-                <label>
-                  <input type="radio" name="condition" value="${option.name}">
-                  ${option.name}
-                </label>
+                  <h3>${option.question}</h3>
+                  <form>
+                      ${option.answers
+                        .map(
+                          (answer) => `
+                          <label>
+                              <input type="radio" name="${option.category}" value="${answer}">
+                              ${answer}
+                          </label><br>
+                      `
+                        )
+                        .join("")}
+                  </form>
               </div>
-            `
-          )
-          .join("")}
-        <button id="checkout-button">Proceed to Checkout</button>
-      `;
-
-      document
-        .getElementById("checkout-button")
-        .addEventListener("click", () => this.showCheckout());
-
-      // // const displayOptions = document.getElementById("buyback-displayOptions");
-      // if (!displayOptions) {
-      //   console.error("Element #buyback-displayOptions not found!");
-      //   return;
-      // }
-
-      // const productSlug = data.slug;
-      // console.log("productSlug", productSlug);
-
-      // // loading product conditions
-      // const conditions = await this.fetchData(`/api/conditions/${productSlug}`);
-      // if (!conditions) return;
-
-      // console.log("conditions", conditions.conditions);
-
-      // // displayOptions.innerHTML = `<option>Loading...</option>`;
-      // let selectedOptions = {}; // Object to store selected answers
-      // displayOptions.innerHTML = `
-      // ${data.options
-      //   .map(
-      //     (option) => `
-      //       <div class="question-block">
-      //           <h3>${option.question}</h3>
-      //           <form>
-      //               ${option.answers
-      //                 .map(
-      //                   (answer) => `
-      //                   <label>
-      //                       <input type="radio" name="${option.category}" value="${answer}">
-      //                       ${answer}
-      //                   </label><br>
-      //               `
-      //                 )
-      //                 .join("")}
-      //           </form>
-      //       </div>
-      //     `
-      //   )
-      //   .join("")}
-
-      //   ${conditions.conditions
-      //     .map(
-      //       (option) => `
-      //         <div class="question-block">
-      //             <br/>
-      //             <form>
-      //                 <label>
-      //                   <input type="radio" name="condition" value="${
-      //                     option.name
-      //                   }">
-      //                     ${option.name}
-      //                 </label>
-      //                 <p>${option.guideline}</p>
-      //                 <p>${option.terms.join(", ")}</p>
-      //             </form>
-      //             <br/>
-      //         </div>
-      //       `
-      //     )
-      //     .join("")}
-      //   `;
-
-      // Add event listeners for all radio buttons
-
-      // content.querySelectorAll("input[type='radio']").forEach((input) => {
-      //   input.addEventListener("change", (event) => {
-      //     const { name, value } = event.target;
-      //     selectedOptions[name] = value; // Store selection
-
-      //     // Log the selected options for debugging
-      //     console.log("Selected Options:", selectedOptions);
-      //   });
-      // });
-
-      // // **Event Listener for All Options**
-      // const checkOutSelect = document.getElementById("buyback-content");
-      // // **Event Listener for All Options**
-      // content.querySelectorAll("input[type='radio']").forEach((input) => {
-      //   input.addEventListener("change", async (event) => {
-      //     const { name, value } = event.target;
-
-      //     // If it's a condition, uncheck others first
-      //     if (name === "condition") {
-      //       content
-      //         .querySelectorAll(`input[name="condition"]`)
-      //         .forEach((radio) => {
-      //           radio.checked = false;
-      //         });
-      //       event.target.checked = true;
-      //     }
-
-      //     selectedOptions[name] = value;
-
-      //     console.log("Selected Options:", selectedOptions);
-
-      //     // **Trigger price update whenever an option is changed**
-      //     checkOutSelect.innerHTML = `<p>Updating Price...</p>`;
-      //     await this.checkOut(selectedOptions, data);
-      //   });
-      // });
-
-      // // Initial price calculation
-      // await this.checkOut(selectedOptions, data);
+              `
+            )
+            .join("")
+        : "<p>No options available</p>"
     }
 
-    showCheckout() {
-      document.getElementById("buyback-content").innerHTML = `
-        <h3>Order Summary</h3>
-        <p><strong>Category:</strong> ${this.selectedOptions.category}</p>
-        <p><strong>Brand:</strong> ${this.selectedOptions.brand}</p>
-        <p><strong>Product:</strong> ${this.selectedOptions.product}</p>
-        <button id="back-button">Back</button>
-      `;
+    <h3>Select Device Condition</h3>
+    <form id="condition-form"> 
+      ${
+        Array.isArray(product.conditions.conditions)
+          ? product.conditions.conditions
+              .map(
+                (condition) => `
+                  <div class="question-block">
+                    <label>
+                      <input type="radio" name="device-condition" value="${
+                        condition.name
+                      }" data-id="${condition._id}">
+                      ${condition.name}
+                    </label>
+                    <p>${condition.guideline}</p>
+                    <p>${condition.terms.join(", ")}</p>
+                  </div>
+                `
+              )
+              .join("")
+          : "<p>No conditions available</p>"
+      }
+    </form>
+    
+    <button id="checkout-button">Proceed to Checkout</button>
+  `;
 
+      // **Ensure only one condition can be selected at a time**
       document
-        .getElementById("back-button")
-        .addEventListener("click", () => this.loadCategories());
+        .querySelectorAll('input[name="device-condition"]')
+        .forEach((radio) => {
+          radio.addEventListener("change", (event) => {
+            this.selectedOptions.condition = {
+              name: event.target.value,
+              id: event.target.getAttribute("data-id"),
+            };
+            console.log("Selected condition:", this.selectedOptions.condition);
+          });
+        });
+
+      // Track question answers
+      document.querySelectorAll('input[type="radio"]').forEach((radio) => {
+        radio.addEventListener("change", (event) => {
+          const category = event.target.name;
+          const value = event.target.value;
+
+          // Ensure this.selectedOptions.answers is initialized
+          if (!this.selectedOptions.answers) {
+            this.selectedOptions.answers = {};
+          }
+
+          // Store selected answer for the category
+          this.selectedOptions.answers[category] = value;
+
+          console.log("Selected options:", this.selectedOptions.answers);
+        });
+      });
+
+      const checkoutButton = document.getElementById("checkout-button");
+      checkoutButton.removeEventListener("click", this.checkOut);
+      checkoutButton.addEventListener("click", () => this.checkOut(product));
+    }
+
+    async checkOut(data) {
+      const content = document.getElementById("buyback-content");
+
+      // Ensure checkOut div exists
+      if (!document.getElementById("buyback-checkOut")) {
+        content.innerHTML += `<div id="buyback-checkOut"></div>`;
+      }
+      const checkOutSelect = document.getElementById("buyback-checkOut");
+
+      checkOutSelect.innerHTML = `<p>Processing...</p>`;
+
+      console.log("Selected Options Before Processing:", this.selectedOptions);
+
+      // Ensure a condition is selected
+      if (!this.selectedOptions.condition) {
+        checkOutSelect.innerHTML = `<p>Please select a condition.</p>`;
+        return;
+      }
+
+      console.log("Base Price from Product:", data);
+      // let finalPrice = data.basePrice;
+      let finalPrice = data.product?.basePrice || 0;
+
+      // const priceModifiersData = data.priceModifiers;
+
+      // console.log("Price Modifiers Data:", priceModifiersData);
+      // if (priceModifiersData && priceModifiersData.priceModifiers) {
+      // const priceModifiersData = data.product?.priceModifiers;
+      const priceModifiersData = data.priceModifiers?.priceModifiers || [];
+      console.log("Price Modifiers Data:", priceModifiersData);
+
+      // ✅ **Fix: Don't add Condition to formattedSelections**
+      const formattedSelections = {};
+
+      if (this.selectedOptions.answers) {
+        for (const [category, value] of Object.entries(
+          this.selectedOptions.answers
+        )) {
+          if (category.trim().toLowerCase() !== "device-condition") {
+            formattedSelections[category.trim()] = value.trim();
+          }
+        }
+      }
+
+      console.log("Formatted Selections:", formattedSelections);
+
+      if (priceModifiersData?.length) {
+        priceModifiersData.forEach(({ category, condition, modifier }) => {
+          if (
+            formattedSelections.hasOwnProperty(category.trim()) &&
+            formattedSelections[category.trim()] === condition.trim()
+          ) {
+            console.log(
+              `Applying Modifier: ${modifier} for ${category} -> ${condition}`
+            );
+            finalPrice += modifier;
+          }
+        });
+      } else {
+        console.warn("No price modifiers found.");
+      }
+
+      // ✅ Now formattedSelections is always available here
+      const finalData = {
+        selectedOptions: this.selectedOptions,
+        formattedSelections, // ✅ No more ReferenceError
+        finalPrice,
+      };
+      console.log("✅ Final Data Passed to Checkout:", finalData);
+
+      checkOutSelect.innerHTML = `<h3>Final Trade-in Value: <b>$${finalPrice}</b></h3>`;
     }
   }
-  //   async checkOut(selectedOptions, data) {
-  //     const checkOutSelect = document.getElementById("buyback-checkOut");
-  //     checkOutSelect.innerHTML = `<p>Processing...</p>`;
-
-  //     console.log("Selected Options:", selectedOptions);
-
-  //     const selectedCondition = selectedOptions["condition"];
-  //     if (!selectedCondition) {
-  //       checkOutSelect.innerHTML = `<p>Please select a condition.</p>`;
-  //       return;
-  //     }
-  //     console.log("Base Price from Product:", data);
-  //     let finalPrice = data.basePrice;
-
-  //     const priceModifiersData = await this.fetchData(
-  //       `/api/priceModifiers/${data.slug}`
-  //     );
-
-  //     console.log("Price Modifiers Data:", priceModifiersData);
-  //     if (priceModifiersData && priceModifiersData.priceModifiers) {
-  //       const priceModifiers = priceModifiersData.priceModifiers;
-  //       // console.log("priceModifiers", priceModifiers);
-
-  //       // 🔹 **Map selectedOptions keys to category names**
-  //       const formattedSelections = { Condition: selectedCondition.trim() };
-
-  //       for (const [category, value] of Object.entries(selectedOptions)) {
-  //         if (category !== "condition") {
-  //           formattedSelections[category.trim()] = value.trim();
-  //         }
-  //       }
-  //       console.log("Formatted Selections:", formattedSelections);
-
-  //       // 🔹 **Apply price modifications**
-  //       priceModifiers.forEach(({ category, condition, modifier }) => {
-  //         if (
-  //           formattedSelections.hasOwnProperty(category.trim()) &&
-  //           formattedSelections[category.trim()] === condition.trim()
-  //         ) {
-  //           console.log(
-  //             `Applying Modifier: ${modifier} for ${category} -> ${condition}`
-  //           );
-  //           finalPrice += modifier;
-  //         }
-  //       });
-  //     }
-
-  //     checkOutSelect.innerHTML = `<h3>Final Trade-in Value: <b>$${finalPrice}</b></h3>`;
-  //   }
-  // }
 
   window.Buyback = Buyback;
 })();
