@@ -3,6 +3,7 @@
     constructor({ apiUrl, apiKey }) {
       this.apiUrl = apiUrl;
       this.apiKey = apiKey;
+      this.selectedItems = [];
       this.selectedOptions = {};
       this.loadWidget();
     }
@@ -69,8 +70,6 @@
           background: #0056b3;
         }
 
-
-        
         .question-block {
           border: 1px solid #ddd;
           padding: 10px;
@@ -98,22 +97,15 @@
         return;
       }
 
-      // container.innerHTML = `
-      //   <div id="buyback-container" style="border:1px solid #ddd; padding:10px; width:300px;">
-      //     <h2>Trade-in Your Device</h2>
-      //     <select id="buyback-category"></select>
-      //     <select id="buyback-model" disabled></select>
-      //     <select id="buyback-product" disabled></select>
-      //     <div id="buyback-displayOptions"></div>
-      //     <div id="buyback-price"></div>
-      //     <div id="buyback-checkOut"></div>
-      //   </div>
-      // `;
-
       container.innerHTML = `
       <div id="buyback-container">
         <h2>Select Your Device</h2>
-        <div id="buyback-content"></div>
+        <div id="buyback-categories"></div>
+        <div id="buyback-brands" style="display: none;"></div>
+        <div id="buyback-products" style="display: none;"></div>
+        <div id="buyback-displayOptions" style="display: none;"></div>
+        <div id="buyback-conditions" style="display: none;"></div>
+        <div id="buyback-checkOut" style="display: none;"></div>
       </div>
     `;
 
@@ -136,12 +128,16 @@
     }
 
     async loadCategories() {
-      const content = document.getElementById("buyback-content");
+      const loadCategories = document.getElementById("buyback-categories");
 
+      if (!loadCategories) {
+        console.error("Element #buyback-categories not found!");
+        return;
+      }
       const data = await this.fetchData(`/api/allcategories`);
       if (!data) return;
 
-      content.innerHTML = `
+      loadCategories.innerHTML = `
         <div class="categories-grid">
           ${data
             .map(
@@ -155,24 +151,36 @@
             .join("")}
         </div>
       `;
+      this.addCategoryClickListeners();
+    }
 
-      document.querySelectorAll(".category-card").forEach((card) =>
+    addCategoryClickListeners() {
+      const categoryCards = document.querySelectorAll(".category-card");
+      categoryCards.forEach((card) => {
         card.addEventListener("click", (event) => {
           const category = event.currentTarget.getAttribute("data-category");
+          console.log("Selected category:", category); // Debugging log
           this.selectedOptions.category = category;
+          this.hideElement("buyback-categories");
           this.loadBrands(category);
-        })
-      );
+        });
+      });
     }
 
     async loadBrands(category) {
-      const content = document.getElementById("buyback-content");
+      const loadBrands = document.getElementById("buyback-brands");
+
+      if (!loadBrands) {
+        console.error("Element #buyback-brands not found!");
+        return;
+      }
+
       const data = await this.fetchData(
         `/api/brands/${category.toLowerCase()}`
       );
       if (!data) return;
 
-      content.innerHTML = `
+      loadBrands.innerHTML = `
         <button id="back-button">Back</button>
         <h3>Select a Brand</h3>
         <div class="brands-grid">
@@ -188,22 +196,45 @@
             .join("")}
         </div>
       `;
+      this.showElement("buyback-brands");
+      this.hideElement("buyback-categories");
 
-      document
-        .getElementById("back-button")
-        .addEventListener("click", () => this.loadCategories());
+      // Attach the back button event listener
+      const backButton = document.getElementById("back-button");
+      if (backButton) {
+        backButton.addEventListener("click", () => {
+          console.log("Back button clicked"); // Debugging log
+          this.showElement("buyback-categories");
+          this.hideElement("buyback-brands");
+        });
+      } else {
+        console.error("Back button not found in the DOM!");
+      }
 
+      this.addBrandClickListeners();
+    }
+
+    addBrandClickListeners() {
+      // const loadBrands = document.getElementById("buyback-brands");
       document.querySelectorAll(".brand-card").forEach((card) =>
         card.addEventListener("click", (event) => {
           const brand = event.currentTarget.getAttribute("data-brand");
           this.selectedOptions.brand = brand;
-          this.loadProducts(category, brand);
+          this.showElement("buyback-products");
+          this.loadProducts(this.selectedOptions.category, brand);
         })
       );
     }
 
     async loadProducts(category, brand) {
-      const content = document.getElementById("buyback-content");
+      const content = document.getElementById("buyback-products");
+      if (!content) {
+        console.error("Element #buyback-products not found!");
+        return;
+      }
+      // Show products and hide brands
+      this.hideElement("buyback-brands");
+      this.showElement("buyback-products");
       const data = await this.fetchData(
         `/api/catalog/${category.toLowerCase()}/${brand.toLowerCase()}`
       );
@@ -212,7 +243,7 @@
       console.log("data in loadproduct", data);
 
       content.innerHTML = `
-        <button id="back-button">Back</button>
+        <button id="back-buttonn">Back</button>
         <h3>Select a Product</h3>
         <div class="products-grid">
           ${data
@@ -228,36 +259,61 @@
         </div>
       `;
 
-      document
-        .getElementById("back-button")
-        .addEventListener("click", () => this.loadBrands(category));
+      // Attach the back button event listener
+      const backButton = document.getElementById("back-buttonn");
+      if (backButton) {
+        backButton.addEventListener("click", () => {
+          console.log("Back button clicked"); // Debugging log
+          this.showElement("buyback-brands");
+          this.hideElement("buyback-products");
+        });
+      } else {
+        console.error("Back button not found in the DOM!");
+      }
 
+      this.addProductClickListeners(); // Ensure product click listeners are added
+    }
+
+    addProductClickListeners() {
+      const content = document.getElementById("buyback-products");
       document.querySelectorAll(".product-card").forEach((card) =>
         card.addEventListener("click", (event) => {
           const productSlug = event.currentTarget.getAttribute("data-product");
           this.selectedOptions.product = productSlug;
+          this.showElement("buyback-displayOptions");
           this.displayOptions(productSlug);
         })
       );
     }
 
     async displayOptions(productSlug) {
-      const content = document.getElementById("buyback-content");
+      // const content = document.getElementById("buyback-displayOptions");
+      // **Fix: Ensure element exists before modifying innerHTML**
+      const displayOptions = document.getElementById("buyback-displayOptions");
+      if (!displayOptions) {
+        console.error("Element #buyback-displayOptions not found!");
+        return;
+      }
 
-      content.innerHTML = `
-        <button id="back-button">Back</button>
-        <h3>Choose Device Condition</h3>
-        <div id="buyback-displayOptions">Loading...</div>
+      displayOptions.innerHTML = `
+        <button id="back-buttonnn">Back</button>
+        <div id="questions-section">Loading...</div>
+        <div id="condition-section" style="display: none;">
+          <h3>Select Device Condition</h3>
+          <form id="buyback-conditions"></form>
+          <button id="checkout-button" style="display: none;">Proceed to Checkout</button>
+        </div>
       `;
 
-      document
-        .getElementById("back-button")
-        .addEventListener("click", () =>
-          this.loadProducts(
-            this.selectedOptions.category,
-            this.selectedOptions.brand
-          )
-        );
+      // Show brands and hide categories
+      this.hideElement("buyback-brands");
+      this.hideElement("buyback-categories");
+      this.hideElement("buyback-products");
+
+      document.getElementById("back-buttonnn").addEventListener("click", () => {
+        this.showElement("buyback-products");
+        this.hideElement("buyback-displayOptions");
+      });
 
       const product = await this.fetchData(`/api/product/${productSlug}`);
       if (!product) {
@@ -269,68 +325,109 @@
 
       this.selectedOptions.product = productSlug;
 
-      // **Fix: Ensure element exists before modifying innerHTML**
-      const displayOptions = document.getElementById("buyback-displayOptions");
-      if (!displayOptions) {
-        console.error("Element #buyback-displayOptions not found!");
-        return;
-      }
-
-      displayOptions.innerHTML = `
-    ${
-      Array.isArray(product.product?.options)
+      // **Show Questions First**
+      const questions = Array.isArray(product.product?.options)
         ? product.product.options
             .map(
               (option) => `
-              <div class="question-block">
-                  <h3>${option.question}</h3>
-                  <form>
-                      ${option.answers
-                        .map(
-                          (answer) => `
-                          <label>
-                              <input type="radio" name="${option.category}" value="${answer}">
-                              ${answer}
-                          </label><br>
-                      `
-                        )
-                        .join("")}
-                  </form>
-              </div>
-              `
+      <div class="question-block">
+        <h3>${option.question}</h3>
+        <form>
+          ${option.answers
+            .map(
+              (answer) => `
+              <label>
+                <input type="radio" name="${option.category}" value="${answer}">
+                ${answer}
+              </label><br>
+            `
+            )
+            .join("")}
+        </form>
+      </div>
+    `
             )
             .join("")
-        : "<p>No options available</p>"
+        : "<p>No questions available</p>";
+
+      document.getElementById("questions-section").innerHTML = questions;
+
+      this.trackAnswers(product);
     }
 
-    <h3>Select Device Condition</h3>
-    <form id="condition-form"> 
-      ${
-        Array.isArray(product.conditions.conditions)
-          ? product.conditions.conditions
-              .map(
-                (condition) => `
-                  <div class="question-block">
-                    <label>
-                      <input type="radio" name="device-condition" value="${
-                        condition.name
-                      }" data-id="${condition._id}">
-                      ${condition.name}
-                    </label>
-                    <p>${condition.guideline}</p>
-                    <p>${condition.terms.join(", ")}</p>
-                  </div>
-                `
-              )
-              .join("")
-          : "<p>No conditions available</p>"
-      }
-    </form>
-    
-    <button id="checkout-button">Proceed to Checkout</button>
-  `;
+    async trackAnswers(product) {
+      // displayOptions.innerHTML = questions;
 
-      // **Ensure only one condition can be selected at a time**
+      // **Track question answers and show conditions after all are answered**
+      const totalQuestions = product.product?.options.length || 0;
+      let answeredQuestions = 0;
+      this.selectedOptions.answers = {}; // Ensure this is initialized
+
+      document.querySelectorAll('input[type="radio"]').forEach((radio) => {
+        radio.addEventListener("change", (event) => {
+          const category = event.target.name;
+          const value = event.target.value;
+
+          if (!this.selectedOptions.answers[category]) {
+            answeredQuestions++; // Only count if it's the first time selecting
+          }
+
+          this.selectedOptions.answers[category] = value;
+          console.log("Selected options:", this.selectedOptions.answers);
+
+          if (answeredQuestions === totalQuestions) {
+            this.hideElement("questions-section");
+            this.showElement("condition-section");
+            this.loadConditions(product);
+          }
+        });
+      });
+    }
+    // Function to load conditions after answering all questions
+    async loadConditions(product) {
+      const conditionForm = document.getElementById("buyback-conditions");
+
+      conditionForm.innerHTML = Array.isArray(product.conditions.conditions)
+        ? product.conditions.conditions
+            .map(
+              (condition) => `
+        <div class="question-block">
+          <label>
+            <input type="radio" name="device-condition" value="${
+              condition.name
+            }" data-id="${condition._id}">
+            ${condition.name}
+          </label>
+          <p>${condition.guideline}</p>
+          <p>${condition.terms.join(", ")}</p>
+        </div>
+      `
+            )
+            .join("")
+        : "<p>No conditions available</p>";
+
+      this.addConditionChangeListeners(product);
+
+      // document
+      //   .querySelectorAll('input[name="device-condition"]')
+      //   .forEach((radio) => {
+      //     radio.addEventListener("change", (event) => {
+      //       this.selectedOptions.condition = {
+      //         name: event.target.value,
+      //         id: event.target.getAttribute("data-id"),
+      //       };
+      //       document.getElementById("checkout-button").style.display = "block";
+      //     });
+      //   });
+
+      // document
+      //   .getElementById("checkout-button")
+      //   .addEventListener("click", () => {
+      //     this.checkOut();
+      //   });
+    }
+
+    addConditionChangeListeners(product) {
       document
         .querySelectorAll('input[name="device-condition"]')
         .forEach((radio) => {
@@ -339,41 +436,25 @@
               name: event.target.value,
               id: event.target.getAttribute("data-id"),
             };
-            console.log("Selected condition:", this.selectedOptions.condition);
+            document.getElementById("checkout-button").style.display = "block";
           });
         });
 
-      // Track question answers
-      document.querySelectorAll('input[type="radio"]').forEach((radio) => {
-        radio.addEventListener("change", (event) => {
-          const category = event.target.name;
-          const value = event.target.value;
-
-          // Ensure this.selectedOptions.answers is initialized
-          if (!this.selectedOptions.answers) {
-            this.selectedOptions.answers = {};
-          }
-
-          // Store selected answer for the category
-          this.selectedOptions.answers[category] = value;
-
-          console.log("Selected options:", this.selectedOptions.answers);
+      document
+        .getElementById("checkout-button")
+        .addEventListener("click", () => {
+          this.checkOut(product);
         });
-      });
-
-      const checkoutButton = document.getElementById("checkout-button");
-      checkoutButton.removeEventListener("click", this.checkOut);
-      checkoutButton.addEventListener("click", () => this.checkOut(product));
     }
 
     async checkOut(data) {
-      const content = document.getElementById("buyback-content");
-
-      // Ensure checkOut div exists
-      if (!document.getElementById("buyback-checkOut")) {
-        content.innerHTML += `<div id="buyback-checkOut"></div>`;
-      }
       const checkOutSelect = document.getElementById("buyback-checkOut");
+      this.hideElement("buyback-displayOptions");
+      this.hideElement("buyback-conditions");
+
+      // Hide display options and condition section
+      // document.getElementById("buyback-displayOptions").style.display = "none";
+      // document.getElementById("buyback-conditions").style.display = "none";
 
       checkOutSelect.innerHTML = `<p>Processing...</p>`;
 
@@ -385,9 +466,17 @@
         return;
       }
 
+      // Check if data is defined and has the required properties
+      if (!data || !data.product) {
+        checkOutSelect.innerHTML = `<p>Error: Product data is missing.</p>`;
+        console.error("Data or product is undefined:", data);
+        return;
+      }
+
       console.log("Base Price from Product:", data);
       // let finalPrice = data.basePrice;
       let finalPrice = data.product?.basePrice || 0;
+      let quantity = 1; // Default quantity
 
       // const priceModifiersData = data.priceModifiers;
 
@@ -431,12 +520,129 @@
       // ✅ Now formattedSelections is always available here
       const finalData = {
         selectedOptions: this.selectedOptions,
-        formattedSelections, // ✅ No more ReferenceError
+        // formattedSelections, // ✅ No more ReferenceError
         finalPrice,
       };
+
+      // Remove "device-condition" from answers
+      if (finalData.selectedOptions.answers) {
+        delete finalData.selectedOptions.answers["device-condition"];
+      }
       console.log("✅ Final Data Passed to Checkout:", finalData);
 
-      checkOutSelect.innerHTML = `<h3>Final Trade-in Value: <b>$${finalPrice}</b></h3>`;
+      // checkOutSelect.innerHTML = `<h3>Final Trade-in Value: <b>$${finalPrice}</b></h3>`;
+
+      // const order = await this.fetchData(
+      //   `/api/orders/${category.toLowerCase()}/}`
+      // );
+      // if (!data) return;
+
+      // console.log("Location Data", data);
+
+      // ✅ **Display Checkout UI**
+      checkOutSelect.innerHTML = `
+    <div style="padding: 16px; border-radius: 8px; background: #f9f9f9;">
+        <button id="back-buttonnnn" style="border: none; background: none; font-size: 16px; cursor: pointer;">
+            ← Back
+        </button>
+
+        <div style="margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+            <h3 style="margin: 0;">Store Location</h3>
+            <p style="font-weight: bold; font-size: 18px;">📍 ${
+              data.storeLocation?.city || "Unknown"
+            }</p>
+            <p>${data.storeLocation?.address || "Address not available"}</p>
+        </div>
+
+        <div style="margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+            <h3 style="margin: 0;">Your Trade-in Item</h3>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="${
+                  data.product?.image || "default.jpg"
+                }" width="60" height="60" style="border-radius: 6px;">
+                <div>
+                    <p style="font-weight: bold;">${
+                      data.product?.name || "Unknown Device"
+                    }</p>
+                    <p>${
+                      Object.entries(this.selectedOptions.answers || {})
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join(", ") || "No selections made"
+                    }</p>
+                    <p>${
+                      this.selectedOptions.condition.name || "Unknown Condition"
+                    }</p>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button id="decreaseQuantity" style="border: none; background: #ddd; padding: 6px; cursor: pointer;">-</button>
+                        <span id="quantityValue">${quantity}</span>
+                        <button id="increaseQuantity" style="border: none; background: #ddd; padding: 6px; cursor: pointer;">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+            <h3 style="margin: 0;">Total Payout: <b><span id="totalPayout">${finalPrice.toFixed(
+              2
+            )} د.إ</span></b></h3>
+        </div>
+
+        <div style="margin-top: 16px;">
+            <button style="padding: 12px 24px; background: blue; color: white; border-radius: 6px; border: none; cursor: pointer;">
+                Continue
+            </button>
+            <button id="another-item" style="padding: 12px 24px; background: blue; color: white; border-radius: 6px; border: none; cursor: pointer;">
+                Add Another Item
+            </button>
+        </div>
+    </div>
+`;
+
+      // ✅ **Fix: Ensure the Back Button Works Properly**
+      document.getElementById("another-item").addEventListener("click", () => {
+        console.log("Another Item clicked! Showing from start.");
+        this.showElement("buyback-categories");
+        // this.hideElement("buyback-checkOut");
+      });
+
+      // ✅ **Fix: Delay Event Listener Attachment**
+      setTimeout(() => {
+        const increaseBtn = document.getElementById("increaseQuantity");
+        const decreaseBtn = document.getElementById("decreaseQuantity");
+
+        if (increaseBtn && decreaseBtn) {
+          increaseBtn.addEventListener("click", () => updateQuantity(1));
+          decreaseBtn.addEventListener("click", () => updateQuantity(-1));
+        } else {
+          console.error("Quantity buttons not found!");
+        }
+      }, 0);
+
+      function updateQuantity(change) {
+        if (quantity + change >= 1) {
+          quantity += change;
+          document.getElementById("quantityValue").innerText = quantity;
+          document.getElementById("totalPayout").innerText = (
+            finalPrice * quantity
+          ).toFixed(2);
+        }
+      }
+
+      this.showElement("buyback-checkOut");
+    }
+
+    showElement(elementId) {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.style.display = "block";
+      }
+    }
+
+    hideElement(elementId) {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.style.display = "none";
+      }
     }
   }
 

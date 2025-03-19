@@ -3,6 +3,7 @@ import Brand from "../models/Brand.js";
 import Product from "../models/Product.js";
 import Condition from "../models/Condition.js";
 import PriceModifier from "../models/PriceModifier.js";
+import Order from "../models/Order.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -134,5 +135,81 @@ export const getPriceModifier = async (req, res) => {
   } catch (err) {
     console.error("Error fetching price modifiers:", err);
     res.status(500).json({ error: "Failed to retrieve price modifiers" });
+  }
+};
+
+// 📌 Create a new order
+export const createOrder = async (req, res) => {
+  try {
+    const order = new Order(req.body);
+    await order.save();
+    res
+      .status(201)
+      .json({ success: true, message: "Order created successfully", order });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to create order", error });
+  }
+};
+
+// 📌 Get a single order by ID
+export const getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order)
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+
+    res.status(200).json({ success: true, order });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch order", error });
+  }
+};
+
+// 📌 Update an order
+export const updateOrder = async (req, res) => {
+  try {
+    const updatedOrder = await Order.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!updatedOrder)
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+
+    res.status(200).json({
+      success: true,
+      message: "Order updated successfully",
+      order: updatedOrder,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to update order", error });
+  }
+};
+
+// 📌 Delete an order
+export const deleteOrder = async (req, res) => {
+  try {
+    const deletedOrder = await Order.findByIdAndDelete(req.params.id);
+    if (!deletedOrder)
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found" });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Order deleted successfully" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to delete order", error });
   }
 };
