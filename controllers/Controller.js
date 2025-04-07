@@ -4,6 +4,7 @@ import Product from "../models/Product.js";
 import Condition from "../models/Condition.js";
 import PriceModifier from "../models/PriceModifier.js";
 import Order from "../models/Order.js";
+import PayoutMethod from "../models/PayoutMethods.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -211,5 +212,14 @@ export const deleteOrder = async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: "Failed to delete order", error });
+  }
+};
+
+export const getPayoutMethod = async (req, res) => {
+  try {
+    const payoutMethods = await PayoutMethod.find();
+    res.status(200).json(payoutMethods);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };

@@ -10,6 +10,7 @@ import {
   getOrderById,
   updateOrder,
   deleteOrder,
+  getPayoutMethod,
 } from "../controllers/Controller.js";
 
 const router = express.Router();
@@ -57,5 +58,7 @@ router.get("/order/:id", getOrderById); // Get order by ID
 router.put("/order/:id", updateOrder); // Update order
 
 router.delete("/order/:id", deleteOrder); // Delete order
+
+router.get("/payout-methods", getPayoutMethod);
 
 export default router;

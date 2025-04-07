@@ -4,6 +4,7 @@
       this.apiUrl = apiUrl;
       this.apiKey = apiKey;
       this.selectedItems = [];
+      this.cartItems = [];
       this.selectedOptions = {};
       this.loadWidget();
     }
@@ -100,12 +101,14 @@
       container.innerHTML = `
       <div id="buyback-container">
         <h2>Select Your Device</h2>
+        <div id="cart-summary" style="margin-top: 24px;"></div>
         <div id="buyback-categories"></div>
         <div id="buyback-brands" style="display: none;"></div>
         <div id="buyback-products" style="display: none;"></div>
         <div id="buyback-displayOptions" style="display: none;"></div>
         <div id="buyback-conditions" style="display: none;"></div>
         <div id="buyback-checkOut" style="display: none;"></div>
+        <div id="contactPayoutSection" style="display: none;"></div>
       </div>
     `;
 
@@ -447,6 +450,40 @@
         });
     }
 
+    renderCartSummary() {
+      const summaryContainer = document.getElementById("cart-summary");
+      if (!summaryContainer) return;
+
+      if (this.cartItems.length === 0) {
+        summaryContainer.innerHTML = "<p>No items added yet.</p>";
+        return;
+      }
+
+      summaryContainer.innerHTML = this.cartItems
+        .map(
+          (item, index) => `
+          <div style="border: 1px solid #ddd; padding: 12px; margin-bottom: 12px; border-radius: 6px;">
+            <strong>Item ${index + 1}</strong>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <img src="${
+                item.productImage
+              }" width="50" height="50" style="border-radius: 4px;" />
+              <div>
+                <p><strong>${item.productName}</strong></p>
+                <p>Condition: ${item.condition.name}</p>
+                <p>Options: ${Object.entries(item.answers)
+                  .map(([k, v]) => `${k}: ${v}`)
+                  .join(", ")}</p>
+                <p>Qty: ${item.quantity}</p>
+                <p>Total: <strong>${item.total.toFixed(2)} د.إ</strong></p>
+              </div>
+            </div>
+          </div>
+        `
+        )
+        .join("");
+    }
+
     async checkOut(data) {
       const checkOutSelect = document.getElementById("buyback-checkOut");
       this.hideElement("buyback-displayOptions");
@@ -474,15 +511,10 @@
       }
 
       console.log("Base Price from Product:", data);
-      // let finalPrice = data.basePrice;
+
       let finalPrice = data.product?.basePrice || 0;
       let quantity = 1; // Default quantity
 
-      // const priceModifiersData = data.priceModifiers;
-
-      // console.log("Price Modifiers Data:", priceModifiersData);
-      // if (priceModifiersData && priceModifiersData.priceModifiers) {
-      // const priceModifiersData = data.product?.priceModifiers;
       const priceModifiersData = data.priceModifiers?.priceModifiers || [];
       console.log("Price Modifiers Data:", priceModifiersData);
 
@@ -538,87 +570,141 @@
       // if (!data) return;
 
       // console.log("Location Data", data);
-
+      // Clean condition from answers
+      if (this.selectedOptions.answers) {
+        delete this.selectedOptions.answers["device-condition"];
+      }
       // ✅ **Display Checkout UI**
+      //       checkOutSelect.innerHTML = `
+      //     <div style="padding: 16px; border-radius: 8px; background: #f9f9f9;">
+      //         <button id="back-buttonnnn" style="border: none; background: none; font-size: 16px; cursor: pointer;">
+      //             ← Back
+      //         </button>
+
+      //         <div style="margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+      //             <h3 style="margin: 0;">Store Location</h3>
+      //             <p style="font-weight: bold; font-size: 18px;">📍 ${
+      //               data.storeLocation?.city || "Unknown"
+      //             }</p>
+      //             <p>${data.storeLocation?.address || "Address not available"}</p>
+      //         </div>
+
+      //         <div style="margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+      //             <h3 style="margin: 0;">Your Trade-in Item</h3>
+      //             <div style="display: flex; align-items: center; gap: 12px;">
+      //                 <img src="${
+      //                   data.product?.image || "default.jpg"
+      //                 }" width="60" height="60" style="border-radius: 6px;">
+      //                 <div>
+      //                     <p style="font-weight: bold;">${
+      //                       data.product?.name || "Unknown Device"
+      //                     }</p>
+      //                     <p>${
+      //                       Object.entries(this.selectedOptions.answers || {})
+      //                         .map(([key, value]) => `${key}: ${value}`)
+      //                         .join(", ") || "No selections made"
+      //                     }</p>
+      //                     <p>${
+      //                       this.selectedOptions.condition.name || "Unknown Condition"
+      //                     }</p>
+      //                     <div style="display: flex; align-items: center; gap: 8px;">
+      //                         <button id="decreaseQuantity" style="border: none; background: #ddd; padding: 6px; cursor: pointer;">-</button>
+      //                         <span id="quantityValue">${quantity}</span>
+      //                         <button id="increaseQuantity" style="border: none; background: #ddd; padding: 6px; cursor: pointer;">+</button>
+      //                     </div>
+      //                 </div>
+      //             </div>
+      //         </div>
+
+      //         <div style="margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+      //             <h3 style="margin: 0;">Total Payout: <b><span id="totalPayout">${finalPrice.toFixed(
+      //               2
+      //             )} د.إ</span></b></h3>
+      //         </div>
+
+      //         <div style="margin-top: 16px;">
+      //             <button style="padding: 12px 24px; background: blue; color: white; border-radius: 6px; border: none; cursor: pointer;">
+      //                 Continue
+      //             </button>
+      //             <button id="another-item" style="padding: 12px 24px; background: blue; color: white; border-radius: 6px; border: none; cursor: pointer;">
+      //                 Add Another Item
+      //             </button>
+      //         </div>
+      //     </div>
+      // `;
+
+      // 🧩 Render HTML
       checkOutSelect.innerHTML = `
-    <div style="padding: 16px; border-radius: 8px; background: #f9f9f9;">
-        <button id="back-buttonnnn" style="border: none; background: none; font-size: 16px; cursor: pointer;">
-            ← Back
-        </button>
+  <div style="padding: 16px; border-radius: 8px; background: #f9f9f9; max-width: 600px; margin: 0 auto;">
+    <button id="back-buttonnnn" style="border: none; background: none; font-size: 16px; cursor: pointer; margin-bottom: 16px;">
+      ← Back
+    </button>
 
-        <div style="margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-            <h3 style="margin: 0;">Store Location</h3>
-            <p style="font-weight: bold; font-size: 18px;">📍 ${
-              data.storeLocation?.city || "Unknown"
-            }</p>
-            <p>${data.storeLocation?.address || "Address not available"}</p>
-        </div>
-
-        <div style="margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-            <h3 style="margin: 0;">Your Trade-in Item</h3>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <img src="${
-                  data.product?.image || "default.jpg"
-                }" width="60" height="60" style="border-radius: 6px;">
-                <div>
-                    <p style="font-weight: bold;">${
-                      data.product?.name || "Unknown Device"
-                    }</p>
-                    <p>${
-                      Object.entries(this.selectedOptions.answers || {})
-                        .map(([key, value]) => `${key}: ${value}`)
-                        .join(", ") || "No selections made"
-                    }</p>
-                    <p>${
-                      this.selectedOptions.condition.name || "Unknown Condition"
-                    }</p>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button id="decreaseQuantity" style="border: none; background: #ddd; padding: 6px; cursor: pointer;">-</button>
-                        <span id="quantityValue">${quantity}</span>
-                        <button id="increaseQuantity" style="border: none; background: #ddd; padding: 6px; cursor: pointer;">+</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div style="margin-top: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
-            <h3 style="margin: 0;">Total Payout: <b><span id="totalPayout">${finalPrice.toFixed(
-              2
-            )} د.إ</span></b></h3>
-        </div>
-
-        <div style="margin-top: 16px;">
-            <button style="padding: 12px 24px; background: blue; color: white; border-radius: 6px; border: none; cursor: pointer;">
-                Continue
-            </button>
-            <button id="another-item" style="padding: 12px 24px; background: blue; color: white; border-radius: 6px; border: none; cursor: pointer;">
-                Add Another Item
-            </button>
-        </div>
+    <div style="margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+      <h3 style="margin: 0;">📍 Store Location</h3>
+      <p style="font-weight: bold; font-size: 18px;">${
+        data.storeLocation?.city || "Unknown"
+      }</p>
+      <p style="margin: 0;">${
+        data.storeLocation?.address || "Address not available"
+      }</p>
     </div>
-`;
+
+    <div style="margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+      <h3 style="margin: 0 0 8px 0;">🛍️ Your Trade-in Item</h3>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <img src="${
+          data.product?.image || "default.jpg"
+        }" width="60" height="60" style="border-radius: 6px;">
+        <div>
+          <p style="font-weight: bold; margin: 0;">${
+            data.product?.name || "Unknown Device"
+          }</p>
+          <p style="margin: 0; font-size: 14px;">
+            ${
+              Object.entries(this.selectedOptions.answers || {})
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(", ") || "No selections"
+            }
+          </p>
+          <p style="margin: 4px 0 0 0;">${
+            this.selectedOptions.condition.name || "Unknown Condition"
+          }</p>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+            <button id="decreaseQuantity" style="border: none; background: #ddd; padding: 6px; cursor: pointer;">-</button>
+            <span id="quantityValue">${quantity}</span>
+            <button id="increaseQuantity" style="border: none; background: #ddd; padding: 6px; cursor: pointer;">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+      <h3 style="margin: 0;">💰 Total Payout: <b><span id="totalPayout">${finalPrice.toFixed(
+        2
+      )} د.إ</span></b></h3>
+    </div>
+
+    <div style="display: flex; gap: 12px;">
+      <button id="continue-btn" style="flex: 1; padding: 12px; background: blue; color: white; border-radius: 6px; border: none; cursor: pointer;">
+        Continue
+      </button>
+      <button id="another-item" style="flex: 1; padding: 12px; background: gray; color: white; border-radius: 6px; border: none; cursor: pointer;">
+        Add Another Item
+      </button>
+    </div>
+  </div>
+  `;
 
       // ✅ **Fix: Ensure the Back Button Works Properly**
-      document.getElementById("another-item").addEventListener("click", () => {
-        console.log("Another Item clicked! Showing from start.");
-        this.showElement("buyback-categories");
-        // this.hideElement("buyback-checkOut");
-      });
+      // document.getElementById("another-item").addEventListener("click", () => {
+      //   console.log("Another Item clicked! Showing from start.");
+      //   this.showElement("buyback-categories");
+      //   // this.hideElement("buyback-checkOut");
+      // });
 
-      // ✅ **Fix: Delay Event Listener Attachment**
-      setTimeout(() => {
-        const increaseBtn = document.getElementById("increaseQuantity");
-        const decreaseBtn = document.getElementById("decreaseQuantity");
-
-        if (increaseBtn && decreaseBtn) {
-          increaseBtn.addEventListener("click", () => updateQuantity(1));
-          decreaseBtn.addEventListener("click", () => updateQuantity(-1));
-        } else {
-          console.error("Quantity buttons not found!");
-        }
-      }, 0);
-
-      function updateQuantity(change) {
+      // Quantity controls
+      const updateQuantity = (change) => {
         if (quantity + change >= 1) {
           quantity += change;
           document.getElementById("quantityValue").innerText = quantity;
@@ -626,7 +712,189 @@
             finalPrice * quantity
           ).toFixed(2);
         }
-      }
+      };
+
+      setTimeout(() => {
+        document
+          .getElementById("increaseQuantity")
+          ?.addEventListener("click", () => updateQuantity(1));
+        document
+          .getElementById("decreaseQuantity")
+          ?.addEventListener("click", () => updateQuantity(-1));
+      }, 0);
+
+      document.getElementById("another-item").addEventListener("click", () => {
+        // Push the selected item to the cart
+        this.cartItems.push({
+          ...this.selectedOptions,
+          quantity,
+          finalPrice,
+          total: finalPrice * quantity,
+          productImage: data.product?.image || "default.jpg",
+          productName: data.product?.name || "Unknown Device",
+        });
+
+        // Reset for next item
+        this.selectedOptions = {};
+        quantity = 1;
+
+        // Go back to category/product selection
+        this.showElement("buyback-categories");
+        this.hideElement("buyback-checkOut");
+
+        // Optionally show cart summary somewhere
+        this.renderCartSummary(); // New function to implement
+      });
+
+      // ✅ **Fix: Delay Event Listener Attachment**
+      // setTimeout(() => {
+      //   const increaseBtn = document.getElementById("increaseQuantity");
+      //   const decreaseBtn = document.getElementById("decreaseQuantity");
+
+      //   if (increaseBtn && decreaseBtn) {
+      //     increaseBtn.addEventListener("click", () => updateQuantity(1));
+      //     decreaseBtn.addEventListener("click", () => updateQuantity(-1));
+      //   } else {
+      //     console.error("Quantity buttons not found!");
+      //   }
+      // }, 0);
+
+      // function updateQuantity(change) {
+      //   if (quantity + change >= 1) {
+      //     quantity += change;
+      //     document.getElementById("quantityValue").innerText = quantity;
+      //     document.getElementById("totalPayout").innerText = (
+      //       finalPrice * quantity
+      //     ).toFixed(2);
+      //   }
+      // }
+
+      // Continue button handler
+      document
+        .getElementById("continue-btn")
+        .addEventListener("click", async () => {
+          const section = document.getElementById("contactPayoutSection");
+          section.style.display = "block";
+          section.innerHTML = `<p>Loading form...</p>`;
+
+          try {
+            // ✅ Fetch payout options from your backend
+            // const response = await fetch("/api/");
+            const payoutOptions = await this.fetchData(`/api/payout-methods`);
+            if (!payoutOptions) return;
+
+            // const payoutOptions = await response.json();
+            console.log("payout options comes successfully", payoutOptions);
+            section.innerHTML = `
+            <h2>Contact</h2>
+            <form id="contactForm">
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <input type="text" placeholder="First Name" name="firstName" required />
+                <input type="text" placeholder="Last Name" name="lastName" required />
+              </div>
+      
+              <input type="email" placeholder="Email Address" name="email" required />
+              <label><input type="checkbox" name="newsletter" checked /> Email me with news and offers</label>
+      
+              <div style="display: flex; align-items: center;">
+                <select name="countryCode">
+                  <option value="+971">🇦🇪 +971</option>
+                  <!-- Add more if needed -->
+                </select>
+                <input type="tel" placeholder="050 123 4567" name="phone" required />
+              </div>
+      
+              <p style="font-size: 12px; color: gray;">
+                By signing up via text, you consent to receive automated messages...
+              </p>
+              <label><input type="checkbox" name="smsConsent" checked />
+                Text me regarding updates on my offer, its status, or promotions
+              </label>
+      
+              <h2>Payout</h2>
+              <div id="payoutOptions" style="display: flex; gap: 20px; flex-wrap: wrap;"></div>
+      
+              <button type="submit" style="margin-top: 20px; padding: 10px 20px;">Lock in Offer</button>
+            </form>
+          `;
+            const payoutContainer = document.getElementById("payoutOptions");
+            const extraFieldsContainer = document.createElement("div");
+            extraFieldsContainer.id = "extraPayoutFields";
+            extraFieldsContainer.style.marginTop = "20px";
+            payoutContainer.after(extraFieldsContainer);
+
+            payoutOptions.forEach((option, index) => {
+              const optionId = `payout-${index}`;
+              payoutContainer.innerHTML += `
+              <label style="text-align: center; flex: 1; max-width: 150px; cursor: pointer;">
+                <input type="radio" name="payoutMethod" value="${
+                  option._id.$oid
+                }" id="${optionId}" data-fields='${JSON.stringify(
+                option.fields
+              )}' required style="margin-bottom: 8px;" />
+                <div style="border: 1px solid #ddd; padding: 10px; border-radius: 8px;">
+                  <img src="${option.icon_url}" alt="${
+                option.name
+              }" style="width: 40px; height: 40px;" />
+                  <div>${option.name}</div>
+                </div>
+              </label>
+            `;
+            });
+
+            // Listen for payout method selection
+            payoutContainer.addEventListener("change", (e) => {
+              if (e.target.name === "payoutMethod") {
+                const selectedFields = JSON.parse(e.target.dataset.fields);
+                extraFieldsContainer.innerHTML = ""; // Clear previous fields
+
+                if (selectedFields.length > 0) {
+                  extraFieldsContainer.innerHTML = `<h3 style="margin-bottom: 10px;">Payout Details</h3>`;
+                }
+
+                selectedFields.forEach((field) => {
+                  extraFieldsContainer.innerHTML += `
+        <div style="margin-bottom: 10px;">
+          <label for="${
+            field.fieldName
+          }" style="display: block; font-weight: 500;">${field.fieldName.replace(
+                    /_/g,
+                    " "
+                  )}</label>
+          <input type="${field.fieldType}" name="${field.fieldName}" id="${
+                    field.fieldName
+                  }" required style="width: 100%; padding: 8px;" />
+        </div>
+      `;
+                });
+              }
+            });
+
+            // ✅ Save details to database on submit
+            // document
+            //   .getElementById("contactForm")
+            //   .addEventListener("submit", async (e) => {
+            //     e.preventDefault();
+            //     const formData = new FormData(e.target);
+            //     const payload = Object.fromEntries(formData.entries());
+
+            //     const saveRes = await fetch("/api/lock-in-offer", {
+            //       method: "POST",
+            //       headers: {
+            //         "Content-Type": "application/json",
+            //       },
+            //       body: JSON.stringify(payload),
+            //     });
+
+            //     const result = await saveRes.json();
+            //     alert("Offer Locked In! 🎉");
+            //     console.log("Saved Data:", result);
+            //   });
+          } catch (err) {
+            section.innerHTML = `<p>Error loading form. Please try again later.</p>`;
+            console.error("Error fetching payout options:", err);
+          }
+        });
 
       this.showElement("buyback-checkOut");
     }
