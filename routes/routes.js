@@ -11,6 +11,8 @@ import {
   updateOrder,
   deleteOrder,
   getPayoutMethod,
+  getBussinessbyUserId,
+  addCart
 } from "../controllers/Controller.js";
 
 const router = express.Router();
@@ -60,5 +62,9 @@ router.put("/order/:id", updateOrder); // Update order
 router.delete("/order/:id", deleteOrder); // Delete order
 
 router.get("/payout-methods", getPayoutMethod);
+
+router.get("/business/:user_id", getBussinessbyUserId);
+
+router.post("/cart/add", addCart);
 
 export default router;

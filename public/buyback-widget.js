@@ -1,8 +1,9 @@
 (function () {
   class Buyback {
-    constructor({ apiUrl, apiKey }) {
+    constructor({ apiUrl, apiKey, user_id }) {
       this.apiUrl = apiUrl;
       this.apiKey = apiKey;
+      this.user_id = user_id;
       this.selectedItems = [];
       this.cartItems = [];
       this.selectedOptions = {};
@@ -119,7 +120,10 @@
       try {
         const response = await fetch(`${this.apiUrl}${endpoint}`, {
           mode: "cors",
-          headers: { Authorization: `Bearer ${this.apiKey}` },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.apiKey}`,
+          },
         });
         if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
@@ -564,12 +568,12 @@
 
       // checkOutSelect.innerHTML = `<h3>Final Trade-in Value: <b>$${finalPrice}</b></h3>`;
 
-      // const order = await this.fetchData(
-      //   `/api/orders/${category.toLowerCase()}/}`
-      // );
-      // if (!data) return;
+      const userLocation = await this.fetchData(
+        `/api/business/${this.user_id}`
+      );
+      if (!data) return;
 
-      // console.log("Location Data", data);
+      console.log("Location Data", userLocation);
       // Clean condition from answers
       if (this.selectedOptions.answers) {
         delete this.selectedOptions.answers["device-condition"];
@@ -643,10 +647,10 @@
     <div style="margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
       <h3 style="margin: 0;">📍 Store Location</h3>
       <p style="font-weight: bold; font-size: 18px;">${
-        data.storeLocation?.city || "Unknown"
+        userLocation?.country || "Unknown"
       }</p>
       <p style="margin: 0;">${
-        data.storeLocation?.address || "Address not available"
+        userLocation?.address || "Address not available"
       }</p>
     </div>
 
@@ -682,7 +686,7 @@
     <div style="margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
       <h3 style="margin: 0;">💰 Total Payout: <b><span id="totalPayout">${finalPrice.toFixed(
         2
-      )} د.إ</span></b></h3>
+      )}</span></b></h3>
     </div>
 
     <div style="display: flex; gap: 12px;">
@@ -743,7 +747,14 @@
         this.hideElement("buyback-checkOut");
 
         // Optionally show cart summary somewhere
-        this.renderCartSummary(); // New function to implement
+        if (this.renderCartSummary) this.renderCartSummary();
+
+        document
+          .getElementById("back-buttonnnn")
+          .addEventListener("click", () => {
+            this.showElement("buyback-conditions");
+            this.hideElement("buyback-checkOut");
+          });
       });
 
       // ✅ **Fix: Delay Event Listener Attachment**
@@ -773,19 +784,82 @@
       document
         .getElementById("continue-btn")
         .addEventListener("click", async () => {
-          const section = document.getElementById("contactPayoutSection");
-          section.style.display = "block";
-          section.innerHTML = `<p>Loading form...</p>`;
+          // First, add the current item to the cart
+          this.cartItems.push({
+            ...this.selectedOptions,
+            quantity,
+            finalPrice,
+            total: finalPrice * quantity,
+            productImage: data.product?.image || "default.jpg",
+            productName: data.product?.name || "Unknown Device",
+          });
 
-          try {
-            // ✅ Fetch payout options from your backend
-            // const response = await fetch("/api/");
-            const payoutOptions = await this.fetchData(`/api/payout-methods`);
-            if (!payoutOptions) return;
+          // Now, proceed to send the cart items to the database
+          if (this.cartItems.length > 0) {
+            console.log("cart items 2: ", this.cartItems);
 
-            // const payoutOptions = await response.json();
-            console.log("payout options comes successfully", payoutOptions);
-            section.innerHTML = `
+            let cartResult = null;
+
+            const items = this.cartItems.map((item) => ({
+              product_name: item.productName,
+              product_slug: item.product,
+              options_selected: [
+                item.answers?.Storage,
+                item.answers?.["Network Type"],
+                item.condition?.name,
+              ].filter(Boolean),
+              quantity: item.quantity,
+              price: item.finalPrice,
+            }));
+
+            const total_price = items.reduce(
+              (acc, curr) => acc + curr.price * curr.quantity,
+              0
+            );
+
+            const data = {
+              user_id: this.user_id,
+              store_location_id: userLocation?._id,
+              items,
+              total_price,
+            };
+
+            console.log("cart data before entering into db", data);
+
+            try {
+              const response = await fetch(`${this.apiUrl}/api/cart/add`, {
+                method: "POST",
+                mode: "cors",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${this.apiKey}`,
+                },
+                body: JSON.stringify(data),
+              });
+
+              cartResult = await response.json();
+              console.log("Cart added to DB:", cartResult);
+              // Optionally show success or redirect
+            } catch (error) {
+              console.error("Error saving cart:", error);
+            }
+
+            const section = document.getElementById("contactPayoutSection");
+            section.style.display = "block";
+            section.innerHTML = `<p>Loading form...</p>`;
+
+            try {
+              // ✅ Fetch payout options from your backend
+              // const response = await fetch("/api/");
+              const payoutOptions = await this.fetchData(`/api/payout-methods`);
+              console.log("payoutOptions =", payoutOptions);
+              if (!payoutOptions || !Array.isArray(payoutOptions)) {
+                section.innerHTML = `<p>Error: No payout options received.</p>`;
+                return;
+              }
+
+              console.log("✅ Payout Options:", payoutOptions);
+              section.innerHTML = `
             <h2>Contact</h2>
             <form id="contactForm">
               <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -817,82 +891,154 @@
               <button type="submit" style="margin-top: 20px; padding: 10px 20px;">Lock in Offer</button>
             </form>
           `;
-            const payoutContainer = document.getElementById("payoutOptions");
-            const extraFieldsContainer = document.createElement("div");
-            extraFieldsContainer.id = "extraPayoutFields";
-            extraFieldsContainer.style.marginTop = "20px";
-            payoutContainer.after(extraFieldsContainer);
+              const payoutContainer = document.getElementById("payoutOptions");
+              const extraFieldsContainer = document.createElement("div");
+              extraFieldsContainer.id = "extraPayoutFields";
+              extraFieldsContainer.style.marginTop = "20px";
+              payoutContainer.after(extraFieldsContainer);
 
-            payoutOptions.forEach((option, index) => {
-              const optionId = `payout-${index}`;
-              payoutContainer.innerHTML += `
+              payoutOptions.forEach((option, index) => {
+                const optionId = `payout-${index}`;
+                const fieldsArray = Array.isArray(option.fields)
+                  ? option.fields
+                  : [];
+                const encodedFields = JSON.stringify(fieldsArray || []);
+                payoutContainer.innerHTML += `
               <label style="text-align: center; flex: 1; max-width: 150px; cursor: pointer;">
                 <input type="radio" name="payoutMethod" value="${
-                  option._id.$oid
-                }" id="${optionId}" data-fields='${JSON.stringify(
-                option.fields
-              )}' required style="margin-bottom: 8px;" />
+                  option._id?.$oid || option._id
+                }" 
+                       id="${optionId}"  data-fields='${encodedFields.replace(
+                  /"/g,
+                  "&quot;"
+                )}' required style="margin-bottom: 8px;" />
                 <div style="border: 1px solid #ddd; padding: 10px; border-radius: 8px;">
                   <img src="${option.icon_url}" alt="${
-                option.name
-              }" style="width: 40px; height: 40px;" />
+                  option.name
+                }" style="width: 40px; height: 40px;" />
                   <div>${option.name}</div>
                 </div>
               </label>
             `;
-            });
+              });
 
-            // Listen for payout method selection
-            payoutContainer.addEventListener("change", (e) => {
-              if (e.target.name === "payoutMethod") {
-                const selectedFields = JSON.parse(e.target.dataset.fields);
-                extraFieldsContainer.innerHTML = ""; // Clear previous fields
+              // Listen for payout method selection
+              payoutContainer.addEventListener("change", (e) => {
+                if (e.target.name === "payoutMethod") {
+                  const encodedFields = e.target.dataset.fields || "";
+                  let selectedFields = [];
+                  try {
+                    selectedFields = JSON.parse(encodedFields);
+                  } catch (err) {
+                    console.error("⚠️ Failed to parse payout fields:", err);
+                  }
 
-                if (selectedFields.length > 0) {
-                  extraFieldsContainer.innerHTML = `<h3 style="margin-bottom: 10px;">Payout Details</h3>`;
+                  extraFieldsContainer.innerHTML = ""; // Clear previous fields
+
+                  if (selectedFields.length > 0) {
+                    extraFieldsContainer.innerHTML = `<h3 style="margin-bottom: 10px;">Payout Details</h3>`;
+                  }
+
+                  selectedFields.forEach((field) => {
+                    extraFieldsContainer.innerHTML += `
+                    <div style="margin-bottom: 10px;">
+                      <label for="${
+                        field.fieldName
+                      }" style="display: block; font-weight: 500;">
+                        ${field.fieldName.replace(/_/g, " ")}
+                      </label>
+                      <input type="${field.fieldType}" name="${
+                      field.fieldName
+                    }" id="${field.fieldName}" 
+                             required style="width: 100%; padding: 8px;" />
+                    </div>
+                  `;
+                  });
                 }
+              });
 
-                selectedFields.forEach((field) => {
-                  extraFieldsContainer.innerHTML += `
-        <div style="margin-bottom: 10px;">
-          <label for="${
-            field.fieldName
-          }" style="display: block; font-weight: 500;">${field.fieldName.replace(
-                    /_/g,
-                    " "
-                  )}</label>
-          <input type="${field.fieldType}" name="${field.fieldName}" id="${
-                    field.fieldName
-                  }" required style="width: 100%; padding: 8px;" />
-        </div>
-      `;
+              // ✅ Save details to database on submit
+              document
+                .getElementById("contactForm")
+                .addEventListener("submit", async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  const formEntries = Object.fromEntries(formData.entries());
+
+                  // Step 1: Create full name
+                  const fullName = `${formEntries.firstName} ${formEntries.lastName}`;
+                  // Step 2: Extract payout fields
+                  const payoutFields = [];
+                  const selectedRadio = document.querySelector(
+                    'input[name="payoutMethod"]:checked'
+                  );
+
+                  if (selectedRadio && selectedRadio.dataset.fields) {
+                    const selectedFields = JSON.parse(
+                      selectedRadio.dataset.fields
+                    );
+                    selectedFields.forEach((field) => {
+                      payoutFields.push({
+                        fieldName: field.fieldName,
+                        data: formEntries[field.fieldName] || "", // Get value from form input
+                      });
+                    });
+                  }
+
+                  // ✅ Final payload
+                  const payload = {
+                    cart_id: cartResult._id, // Replace with actual cart ID
+                    user_id: this.user_id, // Replace with actual user ID
+                    location_id: userLocation._id, // Replace with actual location ID
+                    contact: {
+                      name: fullName,
+                      email: formEntries.email,
+                      contact_number: formEntries.phone,
+                    },
+                    payout: {
+                      payout_name: selectedRadio
+                        ? selectedRadio.nextElementSibling.innerText.trim()
+                        : "Unknown",
+                      fields: payoutFields,
+                    },
+                  };
+
+                  console.log("payout", payload);
+                  try {
+                    const response = await fetch(`${this.apiUrl}/api/order`, {
+                      method: "POST",
+                      mode: "cors",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${this.apiKey}`,
+                      },
+                      body: JSON.stringify(payload),
+                    });
+
+                    // const response = await fetch(`${this.apiUrl}${endpoint}`, {
+                    //   mode: "cors",
+                    //   headers: { Authorization: `Bearer ${this.apiKey}` },
+                    // });
+
+                    if (!response.ok) {
+                      const text = await response.text();
+                      throw new Error(`Failed: ${text}`);
+                    }
+
+                    const result = await response.json();
+                    alert("✅ Offer Locked In! 🎉");
+                    console.log("Saved Data:", result);
+                  } catch (err) {
+                    console.error("🚨 Submit Error:", err.message);
+                    alert("Error submitting order. Please try again.");
+                  }
                 });
-              }
-            });
-
-            // ✅ Save details to database on submit
-            // document
-            //   .getElementById("contactForm")
-            //   .addEventListener("submit", async (e) => {
-            //     e.preventDefault();
-            //     const formData = new FormData(e.target);
-            //     const payload = Object.fromEntries(formData.entries());
-
-            //     const saveRes = await fetch("/api/lock-in-offer", {
-            //       method: "POST",
-            //       headers: {
-            //         "Content-Type": "application/json",
-            //       },
-            //       body: JSON.stringify(payload),
-            //     });
-
-            //     const result = await saveRes.json();
-            //     alert("Offer Locked In! 🎉");
-            //     console.log("Saved Data:", result);
-            //   });
-          } catch (err) {
-            section.innerHTML = `<p>Error loading form. Please try again later.</p>`;
-            console.error("Error fetching payout options:", err);
+            } catch (err) {
+              section.innerHTML = `<p>Error loading form. Please try again later.</p>`;
+              console.error("Error fetching payout options:", err);
+            }
+          } else {
+            alert("Your cart is empty. Please add items before continuing.");
           }
         });
 
